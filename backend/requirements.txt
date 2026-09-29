@@ -1,0 +1,4 @@
+Django==4.2.16
+djangorestframework==3.16.0
+django-cors-headers==4.4.0
+twilio
