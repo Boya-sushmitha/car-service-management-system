@@ -22,9 +22,8 @@ _load_env_file(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-CHANGE_ME')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
-DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-# Application definition
+DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -142,13 +141,17 @@ else:
     EMAIL_FILE_PATH = BASE_DIR / 'emails'
 
 # Allow all hosts during development
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
-# Vite frontend (http://localhost:5173) calling the Django API
+# CORS – allow local dev + the deployed frontend
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]
+# Add the deployed frontend URL (e.g. https://car-service-web.onrender.com)
+_frontend = os.getenv('FRONTEND_URL', '')
+if _frontend:
+    CORS_ALLOWED_ORIGINS.append(_frontend.rstrip('/'))
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
@@ -157,3 +160,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
 }
+
+# WhiteNoise for serving static files in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
