@@ -85,8 +85,18 @@ def login_view(request):
     if not user_obj:
         user_obj = User.objects.filter(email__iexact=username_input).first()
 
+    # Also try matching normalized username without spaces or hyphens
     if not user_obj:
-        return Response({'error': 'Invalid credentials. Please check your username/email and password.'}, status=401)
+        norm_input = username_input.replace(' ', '').replace('-', '').replace('_', '').lower()
+        for u in User.objects.all():
+            norm_db = u.username.replace(' ', '').replace('-', '').replace('_', '').lower()
+            if norm_db == norm_input:
+                user_obj = u
+                break
+
+    if not user_obj:
+        print(f"Login failed: user '{username_input}' not found in database.")
+        return Response({'error': 'No account found with this username or email. Please check your spelling or register.'}, status=401)
 
     # Ensure the account is active
     if not user_obj.is_active:
@@ -94,8 +104,15 @@ def login_view(request):
 
     # Use Django's authenticate to verify password and obtain user
     user = authenticate(username=user_obj.username, password=password)
+    # If failed, also try stripped password in case of copy-paste whitespace
+    if not user and password.strip() != password:
+        user = authenticate(username=user_obj.username, password=password.strip())
+
     if not user:
-        return Response({'error': 'Invalid credentials. Please check your username/email and password.'}, status=401)
+        print(f"Login failed: wrong password for user '{user_obj.username}'.")
+        return Response({'error': 'Incorrect password. Please check your password and try again.'}, status=401)
+
+    print(f"Login successful for user '{user.username}'.")
 
     # Generate token
     token, _ = Token.objects.get_or_create(user=user)

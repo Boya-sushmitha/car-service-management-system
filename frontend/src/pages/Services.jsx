@@ -26,6 +26,14 @@ const RECOMMENDED_SERVICES = {
   not_in_use:     ['Car Inspection & Checks', 'General Repair Service'],
 };
 
+const getTodayLocalStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const BLANK = { car: '', selectedServices: [], customNote: '', service_date: '' };
 
 export default function RequestService() {
@@ -280,7 +288,7 @@ export default function RequestService() {
                       className="form-input"
                       type="date"
                       required
-                      min={new Date().toISOString().split('T')[0]}
+                      min={getTodayLocalStr()}
                       value={form.service_date}
                       onChange={e => setForm(p => ({ ...p, service_date: e.target.value }))}
                     />

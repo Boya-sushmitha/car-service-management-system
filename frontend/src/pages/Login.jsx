@@ -63,14 +63,14 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Username</label>
+            <label className="form-label">Username or Email</label>
             <input 
               className="form-input" 
               type="text" 
               required 
               value={username} 
               onChange={e => setUsername(e.target.value)} 
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
             />
           </div>
           <div className="form-group">

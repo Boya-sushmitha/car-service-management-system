@@ -23,11 +23,12 @@ const SVC_STATUS = [
 const carStatusMeta  = (s) => STATUS_OPTIONS.find(o => o.value === s) || { label: s, color: '#64748b', bg: 'transparent' };
 const svcStatusMeta  = (s) => SVC_STATUS.find(o => o.value === s) || { label: s, color: '#64748b' };
 
-const getNextDate = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().split('T')[0];
+const getTodayLocalStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export default function AdminDashboard() {
@@ -443,7 +444,37 @@ export default function AdminDashboard() {
                                   </td>
                                   <td>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      <input type="date" className="form-input" style={{ padding: '4px 8px', fontSize: 12 }} min={getNextDate(svc.service_date)} value={pickupDateDraft} onChange={e => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: e.target.value }))} />
+                                      <input 
+                                        type="date" 
+                                        className="form-input" 
+                                        style={{ padding: '4px 8px', fontSize: 12 }} 
+                                        min={getTodayLocalStr()} 
+                                        value={pickupDateDraft} 
+                                        onChange={e => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: e.target.value }))} 
+                                      />
+                                      <div style={{ display: 'flex', gap: 6 }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: getTodayLocalStr() }))}
+                                          className="btn btn-ghost"
+                                          style={{ padding: '2px 8px', fontSize: 11, lineHeight: '1.2' }}
+                                        >
+                                          Today
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const d = new Date();
+                                            d.setDate(d.getDate() + 1);
+                                            const nextDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                            setSvcPickupDateDraft(p => ({ ...p, [svc.id]: nextDay }));
+                                          }}
+                                          className="btn btn-ghost"
+                                          style={{ padding: '2px 8px', fontSize: 11, lineHeight: '1.2' }}
+                                        >
+                                          Tomorrow
+                                        </button>
+                                      </div>
                                       <select className="form-select" style={{ padding: '4px 8px', fontSize: 12 }} value={pickupDetailsDraft} onChange={e => setSvcPickupDetailsDraft(p => ({ ...p, [svc.id]: e.target.value }))}>
                                         <option value="">-- Select Details --</option>
                                         <option value="Home Delivery">Home Delivery</option>
