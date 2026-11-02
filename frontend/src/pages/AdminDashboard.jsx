@@ -70,9 +70,8 @@ export default function AdminDashboard() {
     if (!window.confirm(`${u.is_active ? 'Deactivate' : 'Activate'} user "${u.username}"?`)) return;
     try {
       await toggleUserStatus(u.id);
-      const r = await getUsers();
-      setUsers(r.data);
       alert(`✅ User "${u.username}" has been ${u.is_active ? 'deactivated' : 'activated'} successfully!`);
+      try { const r = await getUsers(); setUsers(r.data); } catch(e) { /* silent refresh */ }
     }
     catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
   };
@@ -85,9 +84,9 @@ export default function AdminDashboard() {
     setUpdatingCar(car.id);
     try {
       await updateCar(car.id, { status: newStatus });
-      await fetchAll();
       setCarStatusDraft(p => { const n = { ...p }; delete n[car.id]; return n; });
-      alert(`✅ Vehicle "${car.make} ${car.model}" status updated to "${newStatus.replace(/_/g, ' ')}" successfully!`);
+      alert(`✅ Vehicle "${car.make} ${car.model}" status updated successfully!`);
+      try { await fetchAll(); } catch(e) { /* silent refresh */ }
     } catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingCar(null); }
   };
@@ -99,8 +98,8 @@ export default function AdminDashboard() {
     setUpdatingSvc(svcId);
     try {
       await updateServiceStatus(svcId, newStatus);
-      await fetchAll();
-      alert(`✅ Service request #${svcId} has been ${newStatus === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
+      alert(`✅ Service request has been ${newStatus === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
+      try { await fetchAll(); } catch(e) { /* silent refresh */ }
     }
     catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingSvc(null); }
@@ -121,20 +120,17 @@ export default function AdminDashboard() {
         pickup_details: newPickupDetails || '',
         cost: newCost !== undefined && newCost !== '' ? newCost : 0,
       });
-      await fetchAll();
+
+      // Update succeeded — clear drafts and show success
       setSvcStatusDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDateDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDetailsDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcCostDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
 
-      // Build a summary of what changed
-      const changes = [];
-      if (newStatus !== svc.status) changes.push(`Status → ${newStatus.replace(/_/g, ' ')}`);
-      if (newPickupDate && newPickupDate !== (svc.pickup_date || '')) changes.push(`Pickup Date → ${newPickupDate}`);
-      if (newPickupDetails && newPickupDetails !== (svc.pickup_details || '')) changes.push(`Pickup Details → ${newPickupDetails}`);
-      if (String(newCost) !== String(svc.cost || '')) changes.push(`Amount → ₹${newCost}`);
-      const summary = changes.length > 0 ? '\n\nChanges:\n• ' + changes.join('\n• ') : '';
-      alert(`✅ Service #${svc.id} updated successfully!${summary}`);
+      alert('✅ Service updated successfully!');
+
+      // Refresh data silently
+      try { await fetchAll(); } catch(e) { /* silent refresh */ }
     } catch (err) {
       alert('❌ Failed: ' + getErrorMessage(err));
     } finally {
@@ -507,7 +503,6 @@ export default function AdminDashboard() {
                                     <button onClick={() => handleUpdateSvcStatus(svc)} disabled={!chg || busy} className={`btn btn-sm ${chg ? 'btn-primary' : 'btn-ghost'}`} style={{ minWidth: 90 }}>
                                       {busy ? '⏳ Saving...' : chg ? '✔ Update' : 'No Change'}
                                     </button>
-                                    {busy && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>May take up to 30s if server was idle</div>}
                                   </td>
                                 </tr>
                               );
