@@ -99,22 +99,28 @@ export default function AdminDashboard() {
   /* ── Update service status (progress) ── */
   const handleUpdateSvcStatus = async (svc) => {
     const newStatus = svcStatusDraft[svc.id] || svc.status;
-    if (newStatus === svc.status) { alert('Select a different status first.'); return; }
-    if (!window.confirm(`Update service status to "${newStatus}"?`)) return;
+    const newPickupDate = svcPickupDateDraft[svc.id] !== undefined ? svcPickupDateDraft[svc.id] : (svc.pickup_date || '');
+    const newPickupDetails = svcPickupDetailsDraft[svc.id] !== undefined ? svcPickupDetailsDraft[svc.id] : (svc.pickup_details || '');
+    const defaultAutoCost = (svc.cost && Number(svc.cost) > 0) ? svc.cost : calculateServiceCost(svc.description);
+    const newCost = svcCostDraft[svc.id] !== undefined ? svcCostDraft[svc.id] : (defaultAutoCost || '');
+
     setUpdatingSvc(svc.id);
     try {
       await updateServiceStatus(svc.id, newStatus, {
-        pickup_date: svcPickupDateDraft[svc.id] || svc.pickup_date,
-        pickup_details: svcPickupDetailsDraft[svc.id] || svc.pickup_details,
-        cost: svcCostDraft[svc.id] !== undefined ? svcCostDraft[svc.id] : svc.cost,
+        pickup_date: newPickupDate || null,
+        pickup_details: newPickupDetails || '',
+        cost: newCost !== undefined && newCost !== '' ? newCost : 0,
       });
       await fetchAll();
       setSvcStatusDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDateDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDetailsDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcCostDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
-    } catch (err) { alert('Failed: ' + (err.response?.data?.error || err.message)); }
-    finally { setUpdatingSvc(null); }
+    } catch (err) {
+      alert('Failed: ' + (err.response?.data?.error || err.response?.data?.detail || err.message));
+    } finally {
+      setUpdatingSvc(null);
+    }
   };
 
   const pendingUsers   = users.filter(u => !u.is_active && !u.is_staff);
@@ -452,29 +458,6 @@ export default function AdminDashboard() {
                                         value={pickupDateDraft} 
                                         onChange={e => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: e.target.value }))} 
                                       />
-                                      <div style={{ display: 'flex', gap: 6 }}>
-                                        <button
-                                          type="button"
-                                          onClick={() => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: getTodayLocalStr() }))}
-                                          className="btn btn-ghost"
-                                          style={{ padding: '2px 8px', fontSize: 11, lineHeight: '1.2' }}
-                                        >
-                                          Today
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const d = new Date();
-                                            d.setDate(d.getDate() + 1);
-                                            const nextDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                                            setSvcPickupDateDraft(p => ({ ...p, [svc.id]: nextDay }));
-                                          }}
-                                          className="btn btn-ghost"
-                                          style={{ padding: '2px 8px', fontSize: 11, lineHeight: '1.2' }}
-                                        >
-                                          Tomorrow
-                                        </button>
-                                      </div>
                                       <select className="form-select" style={{ padding: '4px 8px', fontSize: 12 }} value={pickupDetailsDraft} onChange={e => setSvcPickupDetailsDraft(p => ({ ...p, [svc.id]: e.target.value }))}>
                                         <option value="">-- Select Details --</option>
                                         <option value="Home Delivery">Home Delivery</option>

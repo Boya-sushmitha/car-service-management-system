@@ -83,35 +83,38 @@ def update_service_status(request, service_id):
 
         service.save()
 
-        if service.requested_by and service.requested_by.email:
-            if new_status == 'completed':
-                subject = f'Service #{service.id} is Completed!'
-                car_name = f"{service.car.year} {service.car.make} {service.car.model}" if service.car else "Vehicle"
-                body_lines = [
-                    f'Great news! The service for your {car_name} is fully completed.',
-                    f'Final Cost: {service.cost}',
-                    'Please arrange for pickup or delivery.'
-                ]
-                if service.pickup_date:
-                    body_lines.append(f'Pickup date: {service.pickup_date}')
-                if service.pickup_details:
-                    body_lines.append(f'Pickup details: {service.pickup_details}')
-            else:
-                subject = f'Service #{service.id} status: {service.status}'
-                body_lines = [
-                    f'Your service request for {service.car} was updated.',
-                    f'Status: {service.status}',
-                    f'Cost: {service.cost}',
-                    f'Pickup date: {service.pickup_date or "Not set yet"}',
-                    f'Pickup details: {service.pickup_details or "—"}',
-                ]
+        try:
+            if service.requested_by and service.requested_by.email:
+                if new_status == 'completed':
+                    subject = f'Service #{service.id} is Completed!'
+                    car_name = f"{service.car.year} {service.car.make} {service.car.model}" if service.car else "Vehicle"
+                    body_lines = [
+                        f'Great news! The service for your {car_name} is fully completed.',
+                        f'Final Cost: {service.cost}',
+                        'Please arrange for pickup or delivery.'
+                    ]
+                    if service.pickup_date:
+                        body_lines.append(f'Pickup date: {service.pickup_date}')
+                    if service.pickup_details:
+                        body_lines.append(f'Pickup details: {service.pickup_details}')
+                else:
+                    subject = f'Service #{service.id} status: {service.status}'
+                    body_lines = [
+                        f'Your service request for {service.car} was updated.',
+                        f'Status: {service.status}',
+                        f'Cost: {service.cost}',
+                        f'Pickup date: {service.pickup_date or "Not set yet"}',
+                        f'Pickup details: {service.pickup_details or "—"}',
+                    ]
 
-            send_service_details_email(
-                to_email=service.requested_by.email,
-                username=service.requested_by.username,
-                subject=subject,
-                body_lines=body_lines,
-            )
+                send_service_details_email(
+                    to_email=service.requested_by.email,
+                    username=service.requested_by.username,
+                    subject=subject,
+                    body_lines=body_lines,
+                )
+        except Exception as e:
+            print(f"Failed to send status update email: {e}")
 
         return Response({
             'message': 'Service status updated.',
