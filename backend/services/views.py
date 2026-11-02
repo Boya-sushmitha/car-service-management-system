@@ -63,34 +63,48 @@ def update_service_status(request, service_id):
     try:
         service = Service.objects.get(pk=service_id)
         service.status = new_status
-        if new_status == 'completed':
-            service.completed = True
+        service.completed = (new_status == 'completed')
 
         # Save pickup info if provided
         pickup_date = request.data.get('pickup_date')
         if pickup_date:
-            service.pickup_date = pickup_date
+            try:
+                if isinstance(pickup_date, str):
+                    pickup_date = pickup_date.strip()
+                    if '/' in pickup_date:
+                        parts = pickup_date.split('/')
+                        if len(parts) == 3:
+                            # Handle MM/DD/YYYY to YYYY-MM-DD
+                            pickup_date = f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+                service.pickup_date = pickup_date
+            except Exception as pe:
+                print(f"Pickup date parse issue: {pe}")
+        elif pickup_date == '' or pickup_date is None:
+            service.pickup_date = None
 
         pickup_details = request.data.get('pickup_details', '')
-        if pickup_details:
-            service.pickup_details = pickup_details
+        service.pickup_details = str(pickup_details).strip() if pickup_details else ''
 
-        # Save cost / amount if provided
+        # Save cost / amount safely
         cost = request.data.get('cost')
         if cost is not None and cost != '':
-            service.cost = cost
-
+            try:
+                from decimal import Decimal
+                clean_cost = str(cost).replace('₹', '').replace(',', '').strip()
+                service.cost = Decimal(clean_cost)
+            except Exception as ce:
+                print(f"Cost parse issue: {ce}")
 
         service.save()
 
         try:
-            if service.requested_by and service.requested_by.email:
+            if service.requested_by and getattr(service.requested_by, 'email', None):
                 if new_status == 'completed':
                     subject = f'Service #{service.id} is Completed!'
                     car_name = f"{service.car.year} {service.car.make} {service.car.model}" if service.car else "Vehicle"
                     body_lines = [
                         f'Great news! The service for your {car_name} is fully completed.',
-                        f'Final Cost: {service.cost}',
+                        f'Final Cost: ₹{service.cost}',
                         'Please arrange for pickup or delivery.'
                     ]
                     if service.pickup_date:
@@ -102,7 +116,7 @@ def update_service_status(request, service_id):
                     body_lines = [
                         f'Your service request for {service.car} was updated.',
                         f'Status: {service.status}',
-                        f'Cost: {service.cost}',
+                        f'Cost: ₹{service.cost}',
                         f'Pickup date: {service.pickup_date or "Not set yet"}',
                         f'Pickup details: {service.pickup_details or "—"}',
                     ]
@@ -120,8 +134,15 @@ def update_service_status(request, service_id):
             'message': 'Service status updated.',
             'id': service.id,
             'status': service.status,
+            'pickup_date': service.pickup_date,
+            'pickup_details': service.pickup_details,
+            'cost': str(service.cost),
         })
 
     except Service.DoesNotExist:
         return Response({'error': 'Service not found.'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': f'Failed to update: {str(e)}'}, status=400)
 
