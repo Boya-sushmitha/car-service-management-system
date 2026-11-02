@@ -149,12 +149,16 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://car-service-web-lpry.onrender.com',
 ]
 # Add the deployed frontend URL (e.g. https://car-service-web.onrender.com)
 _frontend = os.getenv('FRONTEND_URL', '')
-if _frontend:
+if _frontend and _frontend.rstrip('/') not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(_frontend.rstrip('/'))
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https:\/\/.*\.onrender\.com$",
+]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
