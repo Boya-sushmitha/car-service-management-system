@@ -68,8 +68,13 @@ export default function AdminDashboard() {
   /* ── Toggle user active ── */
   const handleToggleUser = async (u) => {
     if (!window.confirm(`${u.is_active ? 'Deactivate' : 'Activate'} user "${u.username}"?`)) return;
-    try { await toggleUserStatus(u.id); const r = await getUsers(); setUsers(r.data); }
-    catch (err) { alert('Failed: ' + getErrorMessage(err)); }
+    try {
+      await toggleUserStatus(u.id);
+      const r = await getUsers();
+      setUsers(r.data);
+      alert(`✅ User "${u.username}" has been ${u.is_active ? 'deactivated' : 'activated'} successfully!`);
+    }
+    catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
   };
 
   /* ── Update vehicle status ── */
@@ -82,7 +87,8 @@ export default function AdminDashboard() {
       await updateCar(car.id, { status: newStatus });
       await fetchAll();
       setCarStatusDraft(p => { const n = { ...p }; delete n[car.id]; return n; });
-    } catch (err) { alert('Failed: ' + getErrorMessage(err)); }
+      alert(`✅ Vehicle "${car.make} ${car.model}" status updated to "${newStatus.replace(/_/g, ' ')}" successfully!`);
+    } catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingCar(null); }
   };
 
@@ -91,8 +97,12 @@ export default function AdminDashboard() {
     const label = newStatus === 'accepted' ? 'Accept' : 'Reject';
     if (!window.confirm(`${label} this service request?`)) return;
     setUpdatingSvc(svcId);
-    try { await updateServiceStatus(svcId, newStatus); await fetchAll(); }
-    catch (err) { alert('Failed: ' + getErrorMessage(err)); }
+    try {
+      await updateServiceStatus(svcId, newStatus);
+      await fetchAll();
+      alert(`✅ Service request #${svcId} has been ${newStatus === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
+    }
+    catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingSvc(null); }
   };
 
@@ -116,8 +126,17 @@ export default function AdminDashboard() {
       setSvcPickupDateDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDetailsDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcCostDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
+
+      // Build a summary of what changed
+      const changes = [];
+      if (newStatus !== svc.status) changes.push(`Status → ${newStatus.replace(/_/g, ' ')}`);
+      if (newPickupDate && newPickupDate !== (svc.pickup_date || '')) changes.push(`Pickup Date → ${newPickupDate}`);
+      if (newPickupDetails && newPickupDetails !== (svc.pickup_details || '')) changes.push(`Pickup Details → ${newPickupDetails}`);
+      if (String(newCost) !== String(svc.cost || '')) changes.push(`Amount → ₹${newCost}`);
+      const summary = changes.length > 0 ? '\n\nChanges:\n• ' + changes.join('\n• ') : '';
+      alert(`✅ Service #${svc.id} updated successfully!${summary}`);
     } catch (err) {
-      alert('Failed: ' + getErrorMessage(err));
+      alert('❌ Failed: ' + getErrorMessage(err));
     } finally {
       setUpdatingSvc(null);
     }
