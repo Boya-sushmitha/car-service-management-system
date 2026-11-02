@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
+  timeout: 90000, // 90 seconds — Render free-tier can take up to 60s to wake
 });
 
 // Add a request interceptor to include the auth token
@@ -15,6 +16,42 @@ API.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Retry interceptor — on network error or timeout, retry up to 2 times with 3s delay
+// This silently handles the Render free-tier "cold start" spin-up delay
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config;
+    if (!config) return Promise.reject(error);
+
+    // Only retry on network errors (no response) or 5xx server errors
+    const isNetworkError = !error.response;
+    const isServerError = error.response && error.response.status >= 500;
+    const isTimeout = error.code === 'ECONNABORTED';
+
+    if ((isNetworkError || isServerError || isTimeout) && !config._retryCount) {
+      config._retryCount = 0;
+    }
+
+    const MAX_RETRIES = 2;
+    if ((isNetworkError || isServerError || isTimeout) && config._retryCount < MAX_RETRIES) {
+      config._retryCount += 1;
+      // Wait 3 seconds between retries (give Render time to wake up)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      return API(config);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Helper to extract a friendly error message
+export const getErrorMessage = (err) => {
+  if (!err.response && (err.code === 'ECONNABORTED' || err.message?.includes('Network Error') || err.message?.includes('timeout'))) {
+    return 'The server is waking up (Render free tier). Please wait a moment and try again.';
+  }
+  return err.response?.data?.error || err.response?.data?.detail || err.message || 'An error occurred.';
+};
 
 // Auth
 export const login = (data) => API.post('/auth/login/', data);

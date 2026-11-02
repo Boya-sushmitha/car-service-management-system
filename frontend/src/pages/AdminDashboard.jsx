@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { getUsers, toggleUserStatus, getCars, updateCar, getServices, updateServiceStatus } from '../services/api';
+import { getUsers, toggleUserStatus, getCars, updateCar, getServices, updateServiceStatus, getErrorMessage } from '../services/api';
 import { calculateServiceCost } from '../utils/servicePrices';
 
 const STATUS_OPTIONS = [
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
   const handleToggleUser = async (u) => {
     if (!window.confirm(`${u.is_active ? 'Deactivate' : 'Activate'} user "${u.username}"?`)) return;
     try { await toggleUserStatus(u.id); const r = await getUsers(); setUsers(r.data); }
-    catch (err) { alert('Failed: ' + (err.response?.data?.error || err.message)); }
+    catch (err) { alert('Failed: ' + getErrorMessage(err)); }
   };
 
   /* ── Update vehicle status ── */
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
       await updateCar(car.id, { status: newStatus });
       await fetchAll();
       setCarStatusDraft(p => { const n = { ...p }; delete n[car.id]; return n; });
-    } catch (err) { alert('Failed: ' + (err.response?.data?.error || err.message)); }
+    } catch (err) { alert('Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingCar(null); }
   };
 
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`${label} this service request?`)) return;
     setUpdatingSvc(svcId);
     try { await updateServiceStatus(svcId, newStatus); await fetchAll(); }
-    catch (err) { alert('Failed: ' + (err.response?.data?.error || err.message)); }
+    catch (err) { alert('Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingSvc(null); }
   };
 
@@ -117,7 +117,7 @@ export default function AdminDashboard() {
       setSvcPickupDetailsDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcCostDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
     } catch (err) {
-      alert('Failed: ' + (err.response?.data?.error || err.response?.data?.detail || err.message));
+      alert('Failed: ' + getErrorMessage(err));
     } finally {
       setUpdatingSvc(null);
     }
@@ -488,6 +488,7 @@ export default function AdminDashboard() {
                                     <button onClick={() => handleUpdateSvcStatus(svc)} disabled={!chg || busy} className={`btn btn-sm ${chg ? 'btn-primary' : 'btn-ghost'}`} style={{ minWidth: 90 }}>
                                       {busy ? '⏳ Saving...' : chg ? '✔ Update' : 'No Change'}
                                     </button>
+                                    {busy && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>May take up to 30s if server was idle</div>}
                                   </td>
                                 </tr>
                               );
