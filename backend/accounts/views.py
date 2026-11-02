@@ -30,15 +30,18 @@ def register(request):
     if email and User.objects.filter(email=email).exists():
         return Response({'error': 'Email already registered.'}, status=400)
 
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-    )
-    user.is_active = True
-    user.save()
+    try:
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        user.is_active = True
+        user.save()
+    except Exception as e:
+        return Response({'error': f'Registration failed: {str(e)}'}, status=400)
 
     # Create associated Customer record
     try:
@@ -51,8 +54,15 @@ def register(request):
     except Exception as e:
         print(f"Failed to create Customer record: {e}")
 
-    token, _ = Token.objects.get_or_create(user=user)
-    send_registration_email(user, password)
+    try:
+        token, _ = Token.objects.get_or_create(user=user)
+    except Exception as e:
+        return Response({'error': f'Authentication token setup failed: {str(e)}'}, status=500)
+
+    try:
+        send_registration_email(user, password)
+    except Exception as e:
+        print(f"Registration email error: {e}")
 
     return Response({
         'message': 'Registration successful.',

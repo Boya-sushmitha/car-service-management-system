@@ -135,10 +135,12 @@ DEFAULT_FROM_EMAIL = os.getenv(
 
 if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD and EMAIL_HOST_USER != 'your_email@gmail.com':
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-else:
-    # Save emails to a folder so they can be viewed locally
+elif DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     EMAIL_FILE_PATH = BASE_DIR / 'emails'
+    EMAIL_FILE_PATH.mkdir(parents=True, exist_ok=True)
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Allow all hosts during development
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
