@@ -22,7 +22,7 @@ services:
           name: car-service-db
           property: connectionString
       - key: FRONTEND_URL
-        sync: false
+        value: https://car-service-web-lpry.onrender.com
       - key: DJANGO_SUPERUSER_USERNAME
         sync: false
       - key: DJANGO_SUPERUSER_EMAIL
@@ -30,7 +30,7 @@ services:
       - key: DJANGO_SUPERUSER_PASSWORD
         sync: false
       - key: EMAIL_HOST_USER
-        sync: false
+        value: boyasusmi4142@gmail.com
       - key: EMAIL_HOST_PASSWORD
         sync: false
 
@@ -42,7 +42,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        sync: false
+        value: https://car-service-api-gkfj.onrender.com/api
     routes:
       - type: rewrite
         source: /*
