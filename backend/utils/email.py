@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import List, Optional
 
 from django.core.mail import send_mail
@@ -7,12 +8,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def send_notification_email(to_email: str, subject: str, message: str, html_message: Optional[str] = None) -> bool:
-    """Send an email using Django's configured backend.
-    Returns True on success, False otherwise (logs the error)."""
-    if not to_email:
-        logger.warning("Attempted to send email with empty recipient")
-        return False
+def _async_send(to_email: str, subject: str, message: str, html_message: Optional[str] = None):
     try:
         send_mail(
             subject=subject,
@@ -23,10 +19,19 @@ def send_notification_email(to_email: str, subject: str, message: str, html_mess
             html_message=html_message,
         )
         logger.info(f"Email sent to {to_email} – subject: {subject}")
-        return True
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
+
+
+def send_notification_email(to_email: str, subject: str, message: str, html_message: Optional[str] = None) -> bool:
+    """Send an email asynchronously in a background thread so the HTTP request finishes immediately."""
+    if not to_email:
+        logger.warning("Attempted to send email with empty recipient")
         return False
+    # Run in background daemon thread - never block the web request!
+    t = threading.Thread(target=_async_send, args=(to_email, subject, message, html_message), daemon=True)
+    t.start()
+    return True
 
 
 def send_registration_email(user, raw_password: str = "") -> bool:

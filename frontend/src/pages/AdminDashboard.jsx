@@ -485,7 +485,19 @@ export default function AdminDashboard() {
                     ) : (
                       <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
                         <table>
-                          <thead><tr><th>#</th><th>Vehicle</th><th>Date</th><th>Current Status</th><th>Update Status</th><th>Pickup Date, Details & Amount</th><th>Action</th></tr></thead>
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Vehicle</th>
+                              <th>Service Date</th>
+                              <th>Current Status</th>
+                              <th>Next Status</th>
+                              <th>Pickup Date</th>
+                              <th>Pickup Method</th>
+                              <th>Amount (₹)</th>
+                              <th style={{ textAlign: 'center' }}>Action</th>
+                            </tr>
+                          </thead>
                           <tbody>
                             {services.filter(s => ['accepted','in_progress','completed'].includes(s.status)).map((svc, i) => {
                               const car   = carMap[svc.car];
@@ -501,53 +513,79 @@ export default function AdminDashboard() {
                               return (
                                 <tr key={svc.id}>
                                   <td>{i+1}</td>
-                                  <td><div style={{ fontWeight: 600 }}>{car ? `${car.make} ${car.model}` : `Car #${svc.car}`}</div><div style={{ fontSize: 11 }}>{car?.plate_number}</div></td>
-                                  <td>📅 {svc.service_date}</td>
-                                  <td><span className="badge" style={{ color: meta.color, background: `${meta.color}22` }}>{meta.label}</span></td>
                                   <td>
-                                    <select value={draft} onChange={e => setSvcStatusDraft(p => ({ ...p, [svc.id]: e.target.value }))} className="form-select" style={{ minWidth: 140, padding: '6px 10px' }}>
-                                      {SVC_STATUS.filter(o => !['pending','rejected'].includes(o.value)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    <div style={{ fontWeight: 600 }}>{car ? `${car.make} ${car.model}` : `Car #${svc.car}`}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{car?.plate_number}</div>
+                                  </td>
+                                  <td>📅 {svc.service_date}</td>
+                                  <td>
+                                    <span className="badge" style={{ color: meta.color, background: `${meta.color}22` }}>
+                                      {meta.label}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <select 
+                                      value={draft} 
+                                      onChange={e => setSvcStatusDraft(p => ({ ...p, [svc.id]: e.target.value }))} 
+                                      className="form-select" 
+                                      style={{ minWidth: 130, padding: '6px 10px', fontSize: 13 }}
+                                    >
+                                      {SVC_STATUS.filter(o => !['pending','rejected'].includes(o.value)).map(o => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                      ))}
                                     </select>
                                   </td>
                                   <td>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      <input 
-                                        type="date" 
-                                        className="form-input" 
-                                        style={{ padding: '4px 8px', fontSize: 12 }} 
-                                        min={getTodayLocalStr()} 
-                                        value={pickupDateDraft} 
-                                        onChange={e => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: e.target.value }))} 
-                                      />
-                                      <select className="form-select" style={{ padding: '4px 8px', fontSize: 12 }} value={pickupDetailsDraft} onChange={e => setSvcPickupDetailsDraft(p => ({ ...p, [svc.id]: e.target.value }))}>
-                                        <option value="">-- Select Details --</option>
-                                        <option value="Home Delivery">Home Delivery</option>
-                                        <option value="Express Pickup">Express Pickup</option>
-                                        <option value="Standard Pickup">Standard Pickup</option>
-                                        <option value="Owner Pickup">Owner Pickup</option>
-                                      </select>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-primary)', border: '1px solid var(--glass-border)', borderRadius: 6, padding: '4px 8px' }}>
-                                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>₹</span>
-                                        <input
-                                          type="text"
-                                          inputMode="numeric"
-                                          placeholder="Enter Amount"
-                                          className="form-input"
-                                          style={{ padding: '2px 4px', fontSize: 12, border: 'none', background: 'transparent', width: 90 }}
-                                          value={costDraft}
-                                          onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                              setSvcCostDraft(p => ({ ...p, [svc.id]: val }));
-                                            }
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
+                                    <input 
+                                      type="date" 
+                                      className="form-input" 
+                                      style={{ padding: '6px 8px', fontSize: 12, minWidth: 130 }} 
+                                      min={getTodayLocalStr()} 
+                                      value={pickupDateDraft} 
+                                      onChange={e => setSvcPickupDateDraft(p => ({ ...p, [svc.id]: e.target.value }))} 
+                                    />
                                   </td>
                                   <td>
-                                    <button onClick={() => handleUpdateSvcStatus(svc)} disabled={!chg || busy} className={`btn btn-sm ${chg ? 'btn-primary' : 'btn-ghost'}`} style={{ minWidth: 90 }}>
-                                      {busy ? '⏳ Saving...' : chg ? '✔ Update' : 'No Change'}
+                                    <select 
+                                      className="form-select" 
+                                      style={{ padding: '6px 8px', fontSize: 12, minWidth: 140 }} 
+                                      value={pickupDetailsDraft} 
+                                      onChange={e => setSvcPickupDetailsDraft(p => ({ ...p, [svc.id]: e.target.value }))}
+                                    >
+                                      <option value="">-- Select Method --</option>
+                                      <option value="Home Delivery">🏠 Home Delivery</option>
+                                      <option value="Express Pickup">⚡ Express Pickup</option>
+                                      <option value="Standard Pickup">🚗 Standard Pickup</option>
+                                      <option value="Owner Pickup">👤 Owner Pickup</option>
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-primary)', border: '1px solid var(--glass-border)', borderRadius: 6, padding: '4px 8px', minWidth: 100 }}>
+                                      <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>₹</span>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="0.00"
+                                        className="form-input"
+                                        style={{ padding: '2px 4px', fontSize: 13, border: 'none', background: 'transparent', width: '100%', fontWeight: 600 }}
+                                        value={costDraft}
+                                        onChange={e => {
+                                          const val = e.target.value;
+                                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                            setSvcCostDraft(p => ({ ...p, [svc.id]: val }));
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <button 
+                                      onClick={() => handleUpdateSvcStatus(svc)} 
+                                      disabled={!chg || busy} 
+                                      className={`btn btn-sm ${chg ? 'btn-primary' : 'btn-ghost'}`} 
+                                      style={{ minWidth: 95 }}
+                                    >
+                                      {busy ? '⏳ Saving...' : chg ? '✔ Update' : 'Saved'}
                                     </button>
                                   </td>
                                 </tr>
@@ -555,6 +593,7 @@ export default function AdminDashboard() {
                             })}
                           </tbody>
                         </table>
+
                       </div>
                     )}
                   </>
