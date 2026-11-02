@@ -65,31 +65,37 @@ export default function AdminDashboard() {
 
   const handleLogout = () => { logout(); navigate('/admin-login'); };
 
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, isErr = false) => {
+    setToast({ msg, isErr });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   /* ── Toggle user active ── */
   const handleToggleUser = async (u) => {
     if (!window.confirm(`${u.is_active ? 'Deactivate' : 'Activate'} user "${u.username}"?`)) return;
     try {
       await toggleUserStatus(u.id);
       setUsers(prev => prev.map(userItem => userItem.id === u.id ? { ...userItem, is_active: !userItem.is_active } : userItem));
-      alert(`✅ User "${u.username}" has been ${u.is_active ? 'deactivated' : 'activated'} successfully!`);
+      showToast(`User "${u.username}" has been ${u.is_active ? 'deactivated' : 'activated'} successfully!`);
       try { const r = await getUsers(); setUsers(r.data); } catch(e) { /* background sync */ }
     }
-    catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
+    catch (err) { showToast(getErrorMessage(err), true); }
   };
 
   /* ── Update vehicle status ── */
   const handleUpdateCarStatus = async (car, forceStatus = null) => {
     const newStatus = forceStatus || carStatusDraft[car.id] || car.status;
-    if (newStatus === car.status) { alert('Select a different status first.'); return; }
+    if (newStatus === car.status) { showToast('Select a different status first.', true); return; }
     if (!window.confirm(`Update "${car.make} ${car.model}" decision status to "${newStatus.replace('_', ' ')}"?`)) return;
     setUpdatingCar(car.id);
     try {
       await updateCar(car.id, { status: newStatus });
       setCars(prev => prev.map(c => c.id === car.id ? { ...c, status: newStatus } : c));
       setCarStatusDraft(p => { const n = { ...p }; delete n[car.id]; return n; });
-      alert(`✅ Vehicle "${car.make} ${car.model}" status updated successfully!`);
+      showToast(`Vehicle "${car.make} ${car.model}" status updated successfully!`);
       try { await fetchAll(); } catch(e) { /* background sync */ }
-    } catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
+    } catch (err) { showToast(getErrorMessage(err), true); }
     finally { setUpdatingCar(null); }
   };
 
@@ -101,10 +107,10 @@ export default function AdminDashboard() {
     try {
       await updateServiceStatus(svcId, newStatus);
       setServices(prev => prev.map(s => s.id === svcId ? { ...s, status: newStatus } : s));
-      alert(`✅ Service request has been ${newStatus === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
+      showToast(`Service request has been ${newStatus === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
       try { await fetchAll(); } catch(e) { /* background sync */ }
     }
-    catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
+    catch (err) { showToast(getErrorMessage(err), true); }
     finally { setUpdatingSvc(null); }
   };
 
@@ -118,7 +124,7 @@ export default function AdminDashboard() {
 
     setUpdatingSvc(svc.id);
     try {
-      const res = await updateServiceStatus(svc.id, newStatus, {
+      await updateServiceStatus(svc.id, newStatus, {
         pickup_date: newPickupDate || null,
         pickup_details: newPickupDetails || '',
         cost: newCost !== undefined && newCost !== '' ? newCost : 0,
@@ -145,12 +151,12 @@ export default function AdminDashboard() {
       setSvcPickupDetailsDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcCostDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
 
-      alert('✅ Service updated successfully!');
+      showToast('Service updated successfully!');
 
       // Also refresh from server in background
       try { await fetchAll(); } catch(e) { /* background sync */ }
     } catch (err) {
-      alert('❌ Failed: ' + getErrorMessage(err));
+      showToast(getErrorMessage(err), true);
     } finally {
       setUpdatingSvc(null);
     }
@@ -182,6 +188,28 @@ export default function AdminDashboard() {
 
   return (
     <>
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: 24,
+          right: 24,
+          zIndex: 9999,
+          background: toast.isErr ? '#ef4444' : '#10b981',
+          color: '#ffffff',
+          padding: '12px 20px',
+          borderRadius: 8,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          fontWeight: 600,
+          fontSize: 14,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          animation: 'fadeIn 0.2s ease-in-out',
+        }}>
+          <span>{toast.isErr ? '❌' : '✅'}</span>
+          <span>{toast.msg}</span>
+        </div>
+      )}
       <div className="app-layout">
         {/* Simple Sidebar for Admin Dashboard (can be replaced by standard sidebar if preferred, but for now we keep it minimal or use standard) */}
         {/* We'll just use a layout similar to standard pages but full width if we don't include sidebar here, or we can use standard Sidebar if we want. Wait, AdminDashboard doesn't use standard DashboardLayout. Let's make it a standard page. */}
