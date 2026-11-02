@@ -21,26 +21,31 @@ class ServiceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=svc_status)
         return queryset
 
+    permission_classes = [IsAuthenticated]
+
     def perform_create(self, serializer):
         """Auto-assign the logged-in user as the requester, default status=pending."""
-        service = serializer.save(requested_by=self.request.user, status='pending')
-        requester = self.request.user
-        if requester and requester.email:
-            car = service.car
-            send_service_details_email(
-                to_email=requester.email,
-                username=requester.username,
-                subject=f'Service request received for {car}',
-                body_lines=[
-                    f'We received your service request #{service.id}.',
-                    f'Car: {car}',
-                    f'Services: {service.description}',
-                    f'Requested date: {service.service_date}',
-                    f'Status: {service.status}',
-                    f'Estimated cost: {service.cost}',
-                    'You can track this in the app after you log in.',
-                ],
-            )
+        user = self.request.user if (self.request.user and self.request.user.is_authenticated) else None
+        service = serializer.save(requested_by=user, status='pending')
+        try:
+            if user and getattr(user, 'email', None):
+                car = service.car
+                send_service_details_email(
+                    to_email=user.email,
+                    username=user.username,
+                    subject=f'Service request received for {car}',
+                    body_lines=[
+                        f'We received your service request #{service.id}.',
+                        f'Car: {car}',
+                        f'Services: {service.description}',
+                        f'Requested date: {service.service_date}',
+                        f'Status: {service.status}',
+                        f'Estimated cost: {service.cost}',
+                        'You can track this in the app after you log in.',
+                    ],
+                )
+        except Exception as e:
+            print(f"Failed to send service request email: {e}")
 
 
 @api_view(['POST'])

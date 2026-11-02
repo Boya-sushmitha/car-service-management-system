@@ -85,7 +85,13 @@ export default function RequestService() {
       setForm(BLANK);
       await fetchData();
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.car?.[0] || 'Failed to submit request.');
+      const data = err.response?.data;
+      let msg = data?.detail || data?.error;
+      if (!msg && data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0];
+        msg = Array.isArray(data[firstKey]) ? `${firstKey}: ${data[firstKey][0]}` : String(data[firstKey]);
+      }
+      setError(msg || err.message || 'Failed to submit request.');
     } finally {
       setSaving(false);
     }
