@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import { AuthContext } from '../context/AuthContext';
-import { getCars, getServices, createService, deleteService } from '../services/api';
+import { getCars, getServices, createService, deleteService, getErrorMessage } from '../services/api';
 import { SERVICE_PRICES, calculateServiceCost } from '../utils/servicePrices';
 
 const STATUS_STEPS = [
@@ -83,15 +83,10 @@ export default function RequestService() {
       await createService({ car: form.car, service_date: form.service_date, description, cost: defaultCost });
       setShowForm(false);
       setForm(BLANK);
-      await fetchData();
+      alert('✅ Service requested successfully!');
+      try { await fetchData(); } catch(e) { /* silent refresh */ }
     } catch (err) {
-      const data = err.response?.data;
-      let msg = data?.detail || data?.error;
-      if (!msg && data && typeof data === 'object') {
-        const firstKey = Object.keys(data)[0];
-        msg = Array.isArray(data[firstKey]) ? `${firstKey}: ${data[firstKey][0]}` : String(data[firstKey]);
-      }
-      setError(msg || err.message || 'Failed to submit request.');
+      setError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }

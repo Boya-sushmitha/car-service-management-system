@@ -48,10 +48,17 @@ API.interceptors.response.use(
 
 // Helper to extract a friendly error message
 export const getErrorMessage = (err) => {
-  if (!err.response && (err.code === 'ECONNABORTED' || err.message?.includes('Network Error') || err.message?.includes('timeout'))) {
+  const rawMsg = err.response?.data?.error || err.response?.data?.detail || err.message || '';
+  if (
+    !err.response &&
+    (err.code === 'ECONNABORTED' || rawMsg.includes('Network Error') || rawMsg.includes('timeout'))
+  ) {
     return 'Server is starting up. Please wait 30 seconds and try again.';
   }
-  return err.response?.data?.error || err.response?.data?.detail || err.message || 'An error occurred.';
+  if (rawMsg.includes('SSL SYSCALL') || rawMsg.includes('EOF detected') || rawMsg.includes('OperationalError')) {
+    return 'Database reconnecting, please try again.';
+  }
+  return rawMsg || 'An error occurred.';
 };
 
 // Auth
