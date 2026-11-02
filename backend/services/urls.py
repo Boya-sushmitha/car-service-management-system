@@ -6,6 +6,6 @@ router = DefaultRouter()
 router.register(r'', ServiceViewSet, basename='service')
 
 urlpatterns = [
-    path('', include(router.urls)),
     path('<int:service_id>/update-status/', update_service_status, name='service-update-status'),
+    path('', include(router.urls)),
 ]
