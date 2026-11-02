@@ -80,11 +80,14 @@ export default function RequestService() {
     const description = form.selectedServices.join(', ') + (form.customNote ? ` — ${form.customNote}` : '');
     const defaultCost = calculateServiceCost(form.selectedServices);
     try {
-      await createService({ car: form.car, service_date: form.service_date, description, cost: defaultCost });
+      const res = await createService({ car: form.car, service_date: form.service_date, description, cost: defaultCost });
+      if (res?.data) {
+        setServices(prev => [res.data, ...prev]);
+      }
       setShowForm(false);
       setForm(BLANK);
       alert('✅ Service requested successfully!');
-      try { await fetchData(); } catch(e) { /* silent refresh */ }
+      try { await fetchData(); } catch(e) { /* background sync */ }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -94,8 +97,12 @@ export default function RequestService() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Cancel this service request?')) return;
-    try { await deleteService(id); fetchData(); }
-    catch (err) { alert('Failed to cancel.'); }
+    try {
+      await deleteService(id);
+      setServices(prev => prev.filter(s => s.id !== id));
+      try { await fetchData(); } catch(e) { /* background sync */ }
+    }
+    catch (err) { alert('Failed to cancel: ' + getErrorMessage(err)); }
   };
 
   return (

@@ -70,8 +70,9 @@ export default function AdminDashboard() {
     if (!window.confirm(`${u.is_active ? 'Deactivate' : 'Activate'} user "${u.username}"?`)) return;
     try {
       await toggleUserStatus(u.id);
+      setUsers(prev => prev.map(userItem => userItem.id === u.id ? { ...userItem, is_active: !userItem.is_active } : userItem));
       alert(`✅ User "${u.username}" has been ${u.is_active ? 'deactivated' : 'activated'} successfully!`);
-      try { const r = await getUsers(); setUsers(r.data); } catch(e) { /* silent refresh */ }
+      try { const r = await getUsers(); setUsers(r.data); } catch(e) { /* background sync */ }
     }
     catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
   };
@@ -84,9 +85,10 @@ export default function AdminDashboard() {
     setUpdatingCar(car.id);
     try {
       await updateCar(car.id, { status: newStatus });
+      setCars(prev => prev.map(c => c.id === car.id ? { ...c, status: newStatus } : c));
       setCarStatusDraft(p => { const n = { ...p }; delete n[car.id]; return n; });
       alert(`✅ Vehicle "${car.make} ${car.model}" status updated successfully!`);
-      try { await fetchAll(); } catch(e) { /* silent refresh */ }
+      try { await fetchAll(); } catch(e) { /* background sync */ }
     } catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingCar(null); }
   };
@@ -98,8 +100,9 @@ export default function AdminDashboard() {
     setUpdatingSvc(svcId);
     try {
       await updateServiceStatus(svcId, newStatus);
+      setServices(prev => prev.map(s => s.id === svcId ? { ...s, status: newStatus } : s));
       alert(`✅ Service request has been ${newStatus === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
-      try { await fetchAll(); } catch(e) { /* silent refresh */ }
+      try { await fetchAll(); } catch(e) { /* background sync */ }
     }
     catch (err) { alert('❌ Failed: ' + getErrorMessage(err)); }
     finally { setUpdatingSvc(null); }
@@ -115,13 +118,28 @@ export default function AdminDashboard() {
 
     setUpdatingSvc(svc.id);
     try {
-      await updateServiceStatus(svc.id, newStatus, {
+      const res = await updateServiceStatus(svc.id, newStatus, {
         pickup_date: newPickupDate || null,
         pickup_details: newPickupDetails || '',
         cost: newCost !== undefined && newCost !== '' ? newCost : 0,
       });
 
-      // Update succeeded — clear drafts and show success
+      // Instantly update the local services state so the table reflects changes without needing page refresh!
+      setServices(prev => prev.map(item => {
+        if (item.id === svc.id) {
+          return {
+            ...item,
+            status: newStatus,
+            pickup_date: newPickupDate || null,
+            pickup_details: newPickupDetails || '',
+            cost: newCost !== undefined && newCost !== '' ? newCost : item.cost,
+            completed: newStatus === 'completed',
+          };
+        }
+        return item;
+      }));
+
+      // Clear draft states for this service
       setSvcStatusDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDateDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
       setSvcPickupDetailsDraft(p => { const n = { ...p }; delete n[svc.id]; return n; });
@@ -129,8 +147,8 @@ export default function AdminDashboard() {
 
       alert('✅ Service updated successfully!');
 
-      // Refresh data silently
-      try { await fetchAll(); } catch(e) { /* silent refresh */ }
+      // Also refresh from server in background
+      try { await fetchAll(); } catch(e) { /* background sync */ }
     } catch (err) {
       alert('❌ Failed: ' + getErrorMessage(err));
     } finally {
